@@ -1,0 +1,48 @@
+﻿services:
+  openfeature.sample:
+    image: openfeature.sample
+    build:
+      context: .
+      dockerfile: OpenFeature.Sample/Dockerfile
+    ports:
+      - 5000:8080
+      - 5001:8081
+    environment:
+      # Aspire Dashboard
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://openfeature.sample.aspire-dashboard:18889
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    depends_on:
+      - goff-relay-proxy
+  
+  openfeature.sample.aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true
+    ports:
+      - 18888:18888
+      # For Local Development
+      - 18889:18889
+
+  goff-relay-proxy:
+    image: gofeatureflag/go-feature-flag:latest
+    ports:
+      - 1031:1031
+    environment:
+      # Aspire Dashboard
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://openfeature.sample.aspire-dashboard:18889
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      # Force the service name and id to be goff-relay-proxy to avoid UI conflicts in Aspire Dashboard
+      - OTEL_SERVICE_NAME=goff-relay-proxy
+      - OTEL_RESOURCE_ATTRIBUTES=service.instance.id=goff-relay-proxy
+    volumes:
+      - ./flags.yaml:/goff/flags.yaml:ro
+      - ./goff-proxy.yaml:/goff/goff-proxy.yaml:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    depends_on:
+      - goff-relay-proxy
+      - openfeature.sample.aspire-dashboard

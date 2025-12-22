@@ -1,0 +1,20 @@
+server:
+  port: 1031
+  pollingInterval: 1000 # Polls flags file every 1s
+
+# 1. Log Level: Set to DEBUG for detailed output
+logLevel: DEBUG
+
+# 2. Swagger: Enable the Swagger UI
+enableSwagger: true
+# Optional: Define the host if you are running this behind a real domain
+host: "localhost"
+
+# Where the proxy should look for flags
+retrievers:
+  - kind: file
+    path: /goff/flags.yaml # Location of the flags configuration file in your docker container. 
+
+# Optional: Configure how to export evaluation data (e.g., to a log or file)
+exporter:
+  kind: log    

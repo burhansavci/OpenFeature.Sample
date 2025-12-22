@@ -1,0 +1,57 @@
+receivers:
+  # 1. Receiver for GO Feature Flag Proxy
+  prometheus/goff:
+    config:
+      scrape_configs:
+        - job_name: 'goff-relay-proxy-prometheus-scraping'
+          scrape_interval: 1s
+          static_configs:
+            - targets: [ 'goff-relay-proxy:1031' ]
+
+  # 2. Receiver for OTEL Collector (Self-Monitoring)
+  prometheus/self:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector-prometheus-scraping'
+          scrape_interval: 5s
+          static_configs:
+            - targets: [ 'localhost:8888' ] # Scrapes its own internal metrics
+
+processors:
+  # Tag data from the Proxy so it shows as "go-feature-flag-proxy" in Aspire
+  resource/goff:
+    attributes:
+      - key: service.name
+        value: "goff-relay-proxy"
+        action: upsert
+      # Force the ID to match the one in compose.yaml
+      - key: service.instance.id
+        value: "goff-relay-proxy"
+        action: upsert
+  
+  # Tag data from the Collector so it shows as "otel-collector" in Aspire
+  resource/self:
+    attributes:
+      - key: service.name
+        value: "otel-collector"
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: "openfeature.sample.aspire-dashboard:18889"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    # Pipeline 1: GO Feature Flag Data
+    metrics/goff:
+      receivers: [ prometheus/goff ]
+      processors: [ resource/goff ]
+      exporters: [ otlp ]
+
+    # Pipeline 2: OTEL Collector Internal Data
+    metrics/self:
+      receivers: [ prometheus/self ]
+      processors: [ resource/self ]
+      exporters: [ otlp ]

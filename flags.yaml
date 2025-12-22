@@ -1,0 +1,6 @@
+welcome-message:
+  variations:
+    show: true
+    hide: false
+  defaultRule:
+    variation: show
