@@ -4,3 +4,26 @@ welcome-message:
     hide: false
   defaultRule:
     variation: show
+
+user-message:
+  variations:
+    open: true
+    close: false
+  targeting:
+    - query: userId eq "d06dba3f-922c-42dc-a478-c01308087fb4" or userId eq "8746dfc3-5cb3-494f-9e92-86819e7f12a9"
+      variation: open
+  defaultRule:
+    variation: close
+
+user-group-message:
+  bucketingKey: "group"
+  variations:
+    low: "low priority"
+    medium: "medium priority"
+    high: "high priority"
+  defaultRule:
+    percentage:
+      low: 20
+      medium: 30 
+      high: 50
+    

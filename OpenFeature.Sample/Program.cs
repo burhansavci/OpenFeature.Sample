@@ -3,6 +3,7 @@ using OpenFeature;
 using OpenFeature.Hooks;
 using OpenFeature.Model;
 using OpenFeature.Providers.GOFeatureFlag;
+using OpenFeature.Providers.GOFeatureFlag.Models;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -42,7 +43,8 @@ builder.Services.AddOpenFeature(featureBuilder =>
         {
             Endpoint = "http://goff-relay-proxy:1031",
             // Endpoint = "http://localhost:1031",
-            FlagChangePollingIntervalMs = TimeSpan.FromMilliseconds(500)
+            FlagChangePollingIntervalMs = TimeSpan.FromSeconds(5),
+            // EvaluationType = EvaluationType.Remote
         }));
 });
 
@@ -68,13 +70,32 @@ app.MapGet("/welcome", async ([FromServices] IFeatureClient featureClient) =>
 
     var welcomeMessageEnabled = await featureClient.GetBooleanValueAsync("welcome-message", false, context);
 
-    if (welcomeMessageEnabled)
-    {
-        return TypedResults.Ok("Hello world! The welcome-message feature flag was enabled!");
-    }
-
-    return TypedResults.Ok("Hello world!");
+    return TypedResults.Ok(welcomeMessageEnabled ? "Hello world! The welcome-message feature flag was enabled!" : "Hello world!");
 });
 
+app.MapGet("/user/{userId:guid}", async (Guid userId, [FromServices] IFeatureClient featureClient) =>
+{
+    var context = EvaluationContext.Builder()
+        .SetTargetingKey(userId.ToString())
+        .Set("userId", userId.ToString())
+        .Build();
+
+    var userMessageEnabled = await featureClient.GetBooleanValueAsync("user-message", false, context);
+
+
+    return TypedResults.Ok(userMessageEnabled ? $"User message enabled for {userId}!" : "User message disabled!");
+});
+
+app.MapGet("/user-group/{userId:guid}", async (Guid userId, string group, [FromServices] IFeatureClient featureClient) =>
+{
+    var context = EvaluationContext.Builder()
+        .SetTargetingKey(userId.ToString())
+        .Set("group", group)
+        .Build();
+
+    var userGroupMessage = await featureClient.GetStringValueAsync("user-group-message", "default-priority", context);
+
+    return TypedResults.Ok($"User group message for {userGroupMessage}!");
+});
 
 app.Run();
